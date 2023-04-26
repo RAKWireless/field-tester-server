@@ -1,0 +1,12 @@
+mqtt:
+  server: eu1.cloud.thethings.network
+  port: 1883
+  username: my-app@ttn
+  password: NNSXS.UTGKWB.........UPQ
+  topic: v3/+/devices/+/up
+
+logging:
+  level: 10
+
+parser:
+  type: TheThingsStack_v3

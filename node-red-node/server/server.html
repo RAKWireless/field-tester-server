@@ -1,0 +1,148 @@
+<!--
+
+  Copyright (c) 2023 RAKwireless
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+-->
+
+<script type="text/x-red" data-template-name="field_tester_service">
+
+    <div class="form-row">
+        <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+
+    <div class="form-row">
+        <label for="node-input-parser"><i class="fa fa-tag"></i> Parser</label>
+        <select name="Parser" id="node-input-parser">
+            <option value="raw">Raw data</option>
+            <option value="tts3">The Things Stack v3</option>
+            <option value="cs34">ChirpStack v3 and v4</option>
+        </select>
+    </div>
+
+</script>
+
+<script type="text/x-red" data-help-name="field_tester_service">
+
+    <p>
+        A node to process messages from LoRaWAN Field Tester Devices like the RAK10701 by RAKwireless.
+    </p>
+
+    <h3>Options</h3>
+
+    <dl class="message-properties">
+        <dt>Name</dt>
+        <dd>Define a custom name for the node in your workflow.</dd>
+        <dt>Parser</dt>
+        <dd>Select the parser to use depending on the source of the input data.</dd>
+    </dl>
+
+    <h3>Input</h3>
+
+    <p>
+        <p>
+            When using a specific parser (The Things Stack v3 or ChirpStack v3/4) the node expects
+            a topic and payload from an <code>mqtt in</code> node to be fed directly to the Field Tester Service node.
+            The parser will take care of gathering the information from the specific data structure these LNS provide.
+        </p>
+
+        <p>
+            If using the RAW parser, the user is responsible to fed a specific payload to the node:<br />
+        </p>
+                
+        <ul>
+            <li>bytes: array of 10 bytes with the device payload</li>
+            <li>uplink_counter: unique incrementing number</li>
+            <li>gateways: array of gateways, each gateway object must have:
+                <ul>                
+                    <li>rssi: signal quality as received by that gateway</li>
+                    <li>location: object with latitude and longitude properties with the location of the gateway</li>
+                </ul>
+            </li>
+        </ul>         
+            
+        <p>
+            Example:
+        </p>
+
+        <pre>
+{
+    "bytes": [0x1d, 0x63, 0x67, 0x81, 0xdc, 0x67, 0x04, 0x41, 0x08, 0x0b],
+    "uplink_counter": 13,
+    "gateways": [
+        { "rssi": -119, "location": { "latitude": 41.42, "longitude": 2.13 } },
+        { "rssi": -108, "location": { "latitude": 41.30, "longitude": 2.22 } }
+    ]
+}
+        </pre>
+    </p>
+
+    <h3>Output</h3>
+
+    <p>
+        <p>
+            The output can be directly fed to an <code>mqtt out</code> node if using one of the predefined parsers.
+            The node will take care of the output payload and topic for that specific LNS.
+        </p>
+        <p>
+            If using the RAW parser, the output will be a payload object with all the parsed and processed data. It's up to the user to format it.
+        </p>
+        <pre>
+{
+    "latitude":41.6014325,
+    "longitude":2.6221077,
+    "altitude":95,
+    "accuracy":0.8,
+    "hdop":0.6,
+    "sats":15,
+    "num_gateways":2,
+    "min_distance":119,
+    "max_distance":320,
+    "min_rssi":-104,
+    "max_rssi":-98,
+    "buffer":[36,96,102,0,0,2]
+}
+        </pre>            
+    </p>
+
+</script>
+
+<script type="text/javascript">
+    RED.nodes.registerType("field_tester_service", {
+        category: "rakwireless",
+        defaults: {
+            name: {value: ""},
+            parser: {value: "ttsv3"}
+        },
+        color:"#F19800",
+        inputs: 1,
+        outputs: 1,
+        inputLabels: "input",
+        outputLabels: ["output"],
+        icon: "rakwireless.svg",
+        label: function() {
+            return this.name || "field tester service";
+        },
+        labelStyle: function() {
+            return this.name ? "node_label_italic" : "";
+        },
+        paletteLabel: function() {
+            return "field tester service";
+        },
+        oneditprepare: function() {
+            this.name = this.name || "";
+        }
+    });
+</script>

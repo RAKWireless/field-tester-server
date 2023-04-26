@@ -1,0 +1,31 @@
+{
+    "name": "@rakwireless/field-tester-server",
+    "version": "0.1.0",
+    "description": "Field tester server node compatible with disk91 implementation",
+    "homepage": "http://github.com/rakwireless/field-tester-server",
+    "bugs": "http://github.com/rakwireless/field-tester-server/issues",
+    "license": "Apache-2.0",
+    "author": {
+        "name": "Xose Pérez",
+        "email": "xose.perez@rakwireless.com",
+        "url": "https://rakwireless.com"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/rakwireless/field-tester-server.git"
+    },
+    "keywords": [
+        "node-red",
+        "lora",
+        "lorawan",
+        "tester",
+        "coverage",
+        "mapping"
+    ],
+    "node-red": {
+        "version": ">=2.0.0",
+        "nodes": {
+            "field-tester-server": "server/server.js"
+        }
+    }
+}

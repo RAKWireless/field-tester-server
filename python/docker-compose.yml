@@ -1,0 +1,24 @@
+version: '2.0'
+
+services:
+
+  ftdserver:
+    
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ftdserver
+    restart: unless-stopped
+
+    # Either mount the configuration file
+    volumes:
+      - ./config.yml:/app/config.yml
+
+    # Or use environment variables to configure the service
+    #environment:
+    #  MQTT_SERVER: eu1.cloud.thethings.network
+    #  MQTT_PORT: 1883
+    #  MQTT_USERNAME: my-app@ttn
+    #  MQTT_PASSWORD: NNSXS.UTGKWB.........UPQ
+    #  MQTT_TOPIC: v3/+/devices/+/up
+    #  PARSER_TYPE: TheThingsStack_v3
