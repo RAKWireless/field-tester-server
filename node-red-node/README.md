@@ -30,6 +30,8 @@ Once installed the node will be available from the node library under the `rakwi
  
 The node is pretty self explanatory. The node exposes a couple of properties: the name and the parser to use. The name, like with every other node in Node-RED, lets you identify the node in your flow. The parser let's you specify what kind of input the node should expect.
 
+![Node-RED flow](assets/flow.png)
+
 ### Input
 
 Depending on the "Parser" option in the node configuration, the node expects a certain payload as input:
