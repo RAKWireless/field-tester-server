@@ -63,7 +63,7 @@ Example:
 
 ### Output
 
-Again, depending on the parser used the output will change to match the specific LNS downlink format. For the Thhe Things Stack and ChirpStack parsers the node will take care not only of the payload format but also of the default topic, so you can feed the output directly to an *mqtt out* node connected to the same broker.
+Again, depending on the parser used the output will change to match the specific LNS downlink format. For the The Things Stack and ChirpStack parsers the node will take care not only of the payload format but also of the default topic, so you can feed the output directly to an *mqtt out* node connected to the same broker.
 
 For the **Raw data** parser, the node will output all the parsed information along with processed information to the payload. It's up to the user to format it further. An example of the output payload can be:
 

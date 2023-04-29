@@ -138,7 +138,7 @@ module.exports = function(RED) {
 
         // get response
         var data = ftdProcess(bytes, sequence_id, gateways);
-        if (data == null) return null;
+        if (!data) return null;
 
         // build response for TTN
         msg.data = data;
@@ -171,7 +171,7 @@ module.exports = function(RED) {
 
         // get response
         var data = ftdProcess(bytes, sequence_id, gateways);
-        if (data == null) return null;
+        if (!data) return null;
 
         // build response for TTN
         msg.data = data;
