@@ -42,6 +42,7 @@ Depending on the "Parser" option in the node configuration, the node expects a c
 
 The format for the **Raw data** parser must be:
 
+* port: 1 (default) for normal distance resolution (250m), 11 for higher precission (10m)
 * bytes: array of 10 bytes with the device payload
 * uplink_counter: unique incrementing number
 * gateways: array of gateways, each gateway object must have:
@@ -80,9 +81,11 @@ For the **Raw data** parser, the node will output all the parsed information alo
     "max_distance":320,
     "min_rssi":-104,
     "max_rssi":-98,
-    "buffer":[36,96,102,0,0,2]
+    "buffer":[36,96,102,0,1,2]
 }
 ```
+
+When using the higher resolution (port 11), <code>min_distance</code> and <code>max_distance</code> are reported in the <code>buffer</code> as 2 bytes each (10m resolution).
 
 ## Contribute
 
