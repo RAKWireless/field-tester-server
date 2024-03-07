@@ -99,7 +99,7 @@ MIN_DISTANCE=0
 MAX_RSSI=200
 MIN_RSSI=-200
 
-def process(data, sequence_id, gateways):
+def process(data, port, sequence_id, gateways):
 
     # Decode
     lonSign = -1 if ((data[0]>>7) & 0x01) else 1
@@ -111,7 +111,7 @@ def process(data, sequence_id, gateways):
 
     # Send only acceptable quality of position to mappers
     if (hdop > 2) or (sats < 5):
-        return false
+        return False
 
     # Gather data
     output = {
@@ -139,14 +139,27 @@ def process(data, sequence_id, gateways):
             output['max_distance'] = max(output['max_distance'], distance)
 
     # Build response buffer
-    output['buffer'] = [
-        sequence_id % 255, # sequence_id % 255
-        int(output['min_rssi'] + 200) % 255, # min(rssi) + 200
-        int(output['max_rssi'] + 200) % 255, # max(rssi) + 200
-        round(output['min_distance'] / 250.0) % 255, # min(distance) step 250m
-        round(output['max_distance'] / 250.0) % 255, # max(distance) step 250m
-        output['num_gateways'] % 255 # number of gateways
-    ]
+    if 1 == port:
+        output['buffer'] = [
+            sequence_id % 256,
+            int(output['min_rssi'] + 200) % 256,
+            int(output['max_rssi'] + 200) % 256,
+            round(output['min_distance'] / 250.0) % 256,
+            round(output['max_distance'] / 250.0) % 256,
+            output['num_gateways'] % 256
+        ]
+    elif 11 == port:
+        min_distance = int(round(output['min_distance'] / 10))
+        max_distance = int(round(output['max_distance'] / 10))
+        logging.debug("[TTS3] max_distance: %d" % max_distance)
+        output['buffer'] = [
+            sequence_id % 256,
+            int(output['min_rssi'] + 200) % 256,
+            int(output['max_rssi'] + 200) % 256,
+            int(min_distance / 256) % 256, min_distance % 256,
+            int(max_distance / 256) % 256, max_distance % 256,
+            output['num_gateways'] % 256
+        ]
 
     return output
 
@@ -165,7 +178,7 @@ def parser_tts3(config, topic, payload):
 
     # Get port
     port = payload['uplink_message']['f_port']
-    if port != 1:
+    if port != 1 and port != 11:
         return [False, False]
 
     # Get attributes
@@ -175,7 +188,7 @@ def parser_tts3(config, topic, payload):
     logging.debug("[TTS3] Received: 0x%s" % binascii.hexlify(data).decode('utf-8'))
     
     # Process the data
-    data = process(data, sequence_id, gateways)
+    data = process(data, port, sequence_id, gateways)
     if not data:
         return [False, False]
     logging.debug("[TTS3] Processed: %s" % data)
@@ -186,7 +199,7 @@ def parser_tts3(config, topic, payload):
     # Build downlink
     downlink = {
         'downlinks': [{
-            'f_port': 2,
+            'f_port': port + 1,
             'frm_payload': base64.b64encode(bytes(data['buffer'])).decode('utf-8'),
             'priority': 'HIGH'
         }]
@@ -210,7 +223,7 @@ def parser_cs34(config, topic, payload):
 
     # Get port
     port = payload.get('fPort', 0)
-    if port != 1:
+    if port != 1 and port != 11:
         return [False, False]
 
     # Get attributes
@@ -220,7 +233,7 @@ def parser_cs34(config, topic, payload):
     logging.debug("[CS34] Received: 0x%s" % binascii.hexlify(data).decode('utf-8'))
     
     # Process the data
-    data = process(data, sequence_id, gateways)
+    data = process(data, port, sequence_id, gateways)
     if not data:
         return [False, False]
     logging.debug("[CS34] Processed: %s" % data)
@@ -231,7 +244,7 @@ def parser_cs34(config, topic, payload):
     # Build downlink
     downlink = {    
         'confirmed': False,
-        'fPort': 2,
+        'fPort': port + 1,
         'data': base64.b64encode(bytes(data['buffer'])).decode('utf-8')
     }
     if version == 4:

@@ -1,6 +1,6 @@
 /* 
  *
- *  Copyright (c) 2023 RAKwireless
+ *  Copyright (c) 2023-2024 RAKwireless
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -52,7 +52,10 @@ module.exports = function(RED) {
     // Data process
     // --------------------------------------------------------------------
 
-    function ftdProcess(bytes, sequence_id, gateways) {
+    function ftdProcess(bytes, port, sequence_id, gateways) {
+
+        // Filter wrong messages by length
+        if (bytes.length != 10) return null;
 
         // decode bytes    
         var lonSign = (bytes[0]>>7) & 0x01 ? -1 : 1;
@@ -63,7 +66,7 @@ module.exports = function(RED) {
         var sats = bytes[9];
 
         // send only acceptable quality of position to mappers
-        if ((hdop > 2) || (sats < 5)) return false;
+        if ((hdop > 2) || (sats < 5)) return null;
 
         // create decoded data downlink
         var data = {};
@@ -93,14 +96,29 @@ module.exports = function(RED) {
         });
 
         // build response buffer
-        data.buffer = Buffer.from([
-            sequence_id % 255, // sequence_id % 255
-            parseInt(data.min_rssi + 200, 10) % 255, // min(rssi) + 200
-            parseInt(data.max_rssi + 200, 10) % 255, // max(rssi) + 200
-            Math.round(data.min_distance / 250.0) % 255, // min(distance) step 250m
-            Math.round(data.max_distance / 250.0) % 255, // max(distance) step 250m
-            data.num_gateways % 255 // number of gateways
-        ])
+        if (1 == port) {
+            data.buffer = Buffer.from([
+                sequence_id & 0xFF,
+                parseInt(data.min_rssi + 200, 10) & 0xFF,
+                parseInt(data.max_rssi + 200, 10) & 0xFF,
+                Math.round(data.min_distance / 250.0) & 0xFF,
+                Math.round(data.max_distance / 250.0) & 0xFF,
+                data.num_gateways & 0xFF
+            ])
+        } else if (11 == port) {
+            var min_distance = Math.round(data.min_distance / 10);
+            var max_distance = Math.round(data.max_distance / 10);
+            data.buffer = Buffer.from([
+                sequence_id & 0xFF,
+                parseInt(data.min_rssi + 200, 10) & 0xFF,
+                parseInt(data.max_rssi + 200, 10) & 0xFF,
+                (min_distance >> 8) & 0xFF,
+                (min_distance     ) & 0xFF,
+                (max_distance >> 8) & 0xFF,
+                (max_distance     ) & 0xFF,
+                data.num_gateways & 0xFF
+            ])
+        }
 
         return data;
 
@@ -109,13 +127,15 @@ module.exports = function(RED) {
     function parser_raw(msg) {
 
         // get raw input
+        var port = msg.payload.port || 1;
+        if ((port != 1) && (port != 11)) return null;
         var bytes = msg.payload.bytes || [];
         if (bytes.length != 10) return null;
         var uplink_counter = msg.payload.uplink_counter || 0;
         var gateways = msg.payload.gateways || [];
         
         // get response
-        msg.payload = ftdProcess(bytes, uplink_counter, gateways);
+        msg.payload = ftdProcess(bytes, port, uplink_counter, gateways);
         
         return msg;
 
@@ -127,7 +147,8 @@ module.exports = function(RED) {
         if (!msg.payload.uplink_message) return null;
 
         // avoid sending downlink ACK to integration
-        if (msg.payload.uplink_message.f_port != 1) return null;
+        var port = msg.payload.uplink_message.f_port;
+        if ((port != 1) && (port != 11)) return null;
 
         // get raw input
         var bytes = Buffer.from(msg.payload.uplink_message.frm_payload, 'base64');
@@ -137,7 +158,7 @@ module.exports = function(RED) {
         var dev_id = msg.payload.end_device_ids.device_id;
 
         // get response
-        var data = ftdProcess(bytes, sequence_id, gateways);
+        var data = ftdProcess(bytes, port, sequence_id, gateways);
         if (!data) return null;
 
         // build response for TTN
@@ -145,7 +166,7 @@ module.exports = function(RED) {
         msg.topic = msg.topic.replace('/up', '/down/replace');
         msg.payload = {
             "downlinks": [{
-                "f_port": 2,
+                "f_port": port + 1,
                 "frm_payload": data.buffer.toString('base64'),
                 "priority": "HIGH"
             }]
@@ -158,7 +179,8 @@ module.exports = function(RED) {
     function parser_cs34(msg) {
         
         // avoid sending downlink ACK to integration
-        if (msg.payload.fPort != 1) return null;
+        var port = msg.payload.fPort;
+        if ((port != 1) && (port != 11)) return null;
 
         // get version
         var version = ('deviceInfo' in msg.payload) ? 4 : 3;
@@ -170,7 +192,7 @@ module.exports = function(RED) {
         var dev_eui = (version == 4) ? msg.payload.deviceInfo.devEui : msg.payload.devEui;
 
         // get response
-        var data = ftdProcess(bytes, sequence_id, gateways);
+        var data = ftdProcess(bytes, port, sequence_id, gateways);
         if (!data) return null;
 
         // build response for TTN
@@ -178,7 +200,7 @@ module.exports = function(RED) {
         msg.topic = msg.topic.replace('/event/up', '/command/down');
         msg.payload = {
             "confirmed": false,
-            "fPort": 2,
+            "fPort": port + 1,
             "data": data.buffer.toString('base64')
         }
         if (version == 4) {

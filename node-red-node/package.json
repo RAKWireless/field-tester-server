@@ -1,6 +1,6 @@
 {
     "name": "@rakwireless/field-tester-server",
-    "version": "0.1.1",
+    "version": "0.2.0",
     "description": "Field tester server node compatible with disk91 implementation",
     "homepage": "http://github.com/rakwireless/field-tester-server",
     "bugs": "http://github.com/rakwireless/field-tester-server/issues",
