@@ -55,7 +55,8 @@ module.exports = function(RED) {
     function ftdProcess(bytes, port, sequence_id, gateways) {
 
         // Filter wrong messages by length
-        if (bytes.length != 10) return null;
+        if (( 1 == port) && (bytes.length != 10)) return null;
+        if ((11 == port) && (bytes.length != 11)) return null;
 
         // decode bytes    
         var lonSign = (bytes[0]>>7) & 0x01 ? -1 : 1;
