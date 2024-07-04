@@ -140,16 +140,24 @@ def process(data, port, sequence_id, gateways):
 
     # Build response buffer
     if 1 == port:
+        min_distance = int(round(output['min_distance'] / 250.0))
+        if min_distance == 0:
+            min_distance = 1
+        max_distance = int(round(output['max_distance'] / 250.0))
+        if max_distance > 128:
+            max_distance = 128
         output['buffer'] = [
             sequence_id % 256,
             int(output['min_rssi'] + 200) % 256,
             int(output['max_rssi'] + 200) % 256,
-            round(output['min_distance'] / 250.0) % 256,
-            round(output['max_distance'] / 250.0) % 256,
+            min_distance,
+            max_distance,
             output['num_gateways'] % 256
         ]
     elif 11 == port:
         min_distance = int(round(output['min_distance'] / 10))
+        if min_distance == 0:
+            min_distance = 1
         max_distance = int(round(output['max_distance'] / 10))
         logging.debug("[TTS3] max_distance: %d" % max_distance)
         output['buffer'] = [

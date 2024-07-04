@@ -98,16 +98,21 @@ module.exports = function(RED) {
 
         // build response buffer
         if (1 == port) {
+            var min_distance = Math.round(data.min_distance / 250.0);
+            if (min_distance == 0) min_distance = 1;
+            var max_distance = Math.round(data.max_distance / 250.0);
+            if (max_distance > 128) max_distance = 128;
             data.buffer = Buffer.from([
                 sequence_id & 0xFF,
                 parseInt(data.min_rssi + 200, 10) & 0xFF,
                 parseInt(data.max_rssi + 200, 10) & 0xFF,
-                Math.round(data.min_distance / 250.0) & 0xFF,
-                Math.round(data.max_distance / 250.0) & 0xFF,
+                min_distance,
+                max_distance,
                 data.num_gateways & 0xFF
             ])
         } else if (11 == port) {
             var min_distance = Math.round(data.min_distance / 10);
+            if (min_distance == 0) min_distance = 1;
             var max_distance = Math.round(data.max_distance / 10);
             data.buffer = Buffer.from([
                 sequence_id & 0xFF,
