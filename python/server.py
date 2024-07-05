@@ -93,6 +93,8 @@ def angularDistance(location1, location2):
 def circleDistance(location1, location2):
     return EARTH_RADIUS * angularDistance(location1, location2);
 
+def constrain(value, lower, upper):
+    return min(upper, max(lower, value))
 
 MAX_DISTANCE=1e6
 MIN_DISTANCE=0
@@ -140,12 +142,8 @@ def process(data, port, sequence_id, gateways):
 
     # Build response buffer
     if 1 == port:
-        min_distance = int(round(output['min_distance'] / 250.0))
-        if min_distance == 0:
-            min_distance = 1
-        max_distance = int(round(output['max_distance'] / 250.0))
-        if max_distance > 128:
-            max_distance = 128
+        min_distance = constrain(int(round(output['min_distance'] / 250.0)), 1, 128)
+        max_distance = constrain(int(round(output['max_distance'] / 250.0)), 1, 128)
         output['buffer'] = [
             sequence_id % 256,
             int(output['min_rssi'] + 200) % 256,
@@ -155,10 +153,8 @@ def process(data, port, sequence_id, gateways):
             output['num_gateways'] % 256
         ]
     elif 11 == port:
-        min_distance = int(round(output['min_distance'] / 10))
-        if min_distance == 0:
-            min_distance = 1
-        max_distance = int(round(output['max_distance'] / 10))
+        min_distance = constrain(int(round(output['min_distance'] / 10.0)), 1, 65535)
+        max_distance = constrain(int(round(output['max_distance'] / 10.0)), 1, 65535)
         logging.debug("[TTS3] max_distance: %d" % max_distance)
         output['buffer'] = [
             sequence_id % 256,

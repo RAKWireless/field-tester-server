@@ -48,6 +48,12 @@ module.exports = function(RED) {
         return EARTH_RADIUS * angularDistance(location1, location2);
     }
 
+    function constrain(value, min, max) {
+        if (value < min) return min;
+        if (value > max) return max;
+        return value;
+    }
+
     // --------------------------------------------------------------------
     // Data process
     // --------------------------------------------------------------------
@@ -98,10 +104,8 @@ module.exports = function(RED) {
 
         // build response buffer
         if (1 == port) {
-            var min_distance = Math.round(data.min_distance / 250.0);
-            if (min_distance == 0) min_distance = 1;
-            var max_distance = Math.round(data.max_distance / 250.0);
-            if (max_distance > 128) max_distance = 128;
+            var min_distance = constrain(Math.round(data.min_distance / 250.0), 1, 128);
+            var max_distance = constrain(Math.round(data.max_distance / 250.0), 1, 128);
             data.buffer = Buffer.from([
                 sequence_id & 0xFF,
                 parseInt(data.min_rssi + 200, 10) & 0xFF,
@@ -111,9 +115,8 @@ module.exports = function(RED) {
                 data.num_gateways & 0xFF
             ])
         } else if (11 == port) {
-            var min_distance = Math.round(data.min_distance / 10);
-            if (min_distance == 0) min_distance = 1;
-            var max_distance = Math.round(data.max_distance / 10);
+            var min_distance = constrain(Math.round(data.min_distance / 10.0), 1, 65535);
+            var max_distance = constrain(Math.round(data.max_distance / 10.0), 1, 65535);
             data.buffer = Buffer.from([
                 sequence_id & 0xFF,
                 parseInt(data.min_rssi + 200, 10) & 0xFF,

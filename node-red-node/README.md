@@ -77,8 +77,8 @@ For the **Raw data** parser, the node will output all the parsed information alo
     "hdop":0.6,
     "sats":15,
     "num_gateways":2,
-    "min_distance":119,
-    "max_distance":320,
+    "min_distance":19,
+    "max_distance":120,
     "min_rssi":-104,
     "max_rssi":-98,
     "buffer":[36,96,102,0,1,2]
@@ -86,6 +86,8 @@ For the **Raw data** parser, the node will output all the parsed information alo
 ```
 
 When using the higher resolution (port 11), <code>min_distance</code> and <code>max_distance</code> are reported in the <code>buffer</code> as 2 bytes each (10m resolution).
+
+Please note that, according to the original definition of the service, the distances (`min_distance` and `max_distance`) are values from 1 to 128 (so 250m to 32km, since they mean 250m steps). 
 
 ## Contribute
 
