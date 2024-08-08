@@ -118,6 +118,7 @@ def process(data, port, sequence_id, gateways):
     #     return False
 
     # Gather data
+    ## if no sats then only publish SQ
     if (hdop > 2) or (sats < 5):
         output = {
         'latitude': latSign * (encLat * 108 + 53) / 10000000,
