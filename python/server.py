@@ -110,13 +110,16 @@ def process(data, port, sequence_id, gateways):
     encLon = ((data[3] & 0x7f)<<16) + (data[4]<<8) + data[5]
     hdop = data[8]/10
     sats = data[9]
+    min_distance = 0
+    max_distance = 0
 
-    # Send only acceptable quality of position to mappers
-    if (hdop > 2) or (sats < 5):
-        return False
+    # # Send only acceptable quality of position to mappers
+    # if (hdop > 2) or (sats < 5):
+    #     return False
 
     # Gather data
-    output = {
+    if (hdop > 2) or (sats < 5):
+        output = {
         'latitude': latSign * (encLat * 108 + 53) / 10000000,
         'longitude': lonSign * (encLon * 215 + 107) / 10000000,
         'altitude': ((data[6]<<8) + data[7]) - 1000,
@@ -129,21 +132,28 @@ def process(data, port, sequence_id, gateways):
         'min_rssi': MAX_RSSI,
         'max_rssi': MIN_RSSI
     }
+    else:
+        output = {
+            'num_gateways': len(gateways),
+            'min_rssi': MAX_RSSI,
+            'max_rssi': MIN_RSSI
+        }
 
-    for gateway in gateways:
+    if (hdop > 2) or (sats < 5):
+        for gateway in gateways:
+            output['min_rssi'] = min(output['min_rssi'], gateway.get('rssi', MAX_RSSI));
+            output['max_rssi'] = max(output['max_rssi'], gateway.get('rssi', MIN_RSSI));
+            if 'location' in gateway:
+                distance = int(circleDistance(output, gateway['location'])) 
+                output['min_distance'] = min(output['min_distance'], distance)
+                output['max_distance'] = max(output['max_distance'], distance)
 
-        output['min_rssi'] = min(output['min_rssi'], gateway.get('rssi', MAX_RSSI));
-        output['max_rssi'] = max(output['max_rssi'], gateway.get('rssi', MIN_RSSI));
-
-        if 'location' in gateway:
-            distance = int(circleDistance(output, gateway['location'])) 
-            output['min_distance'] = min(output['min_distance'], distance)
-            output['max_distance'] = max(output['max_distance'], distance)
 
     # Build response buffer
     if 1 == port:
-        min_distance = constrain(int(round(output['min_distance'] / 250.0)), 1, 128)
-        max_distance = constrain(int(round(output['max_distance'] / 250.0)), 1, 128)
+        if (hdop > 2) or (sats < 5):
+            min_distance = constrain(int(round(output['min_distance'] / 250.0)), 1, 128)
+            max_distance = constrain(int(round(output['max_distance'] / 250.0)), 1, 128)
         output['buffer'] = [
             sequence_id % 256,
             int(output['min_rssi'] + 200) % 256,
@@ -153,9 +163,10 @@ def process(data, port, sequence_id, gateways):
             output['num_gateways'] % 256
         ]
     elif 11 == port:
-        min_distance = constrain(int(round(output['min_distance'] / 10.0)), 1, 65535)
-        max_distance = constrain(int(round(output['max_distance'] / 10.0)), 1, 65535)
-        logging.debug("[TTS3] max_distance: %d" % max_distance)
+        if (hdop > 2) or (sats < 5):
+            min_distance = constrain(int(round(output['min_distance'] / 10.0)), 1, 65535)
+            max_distance = constrain(int(round(output['max_distance'] / 10.0)), 1, 65535)
+            logging.debug("[TTS3] max_distance: %d" % max_distance)
         output['buffer'] = [
             sequence_id % 256,
             int(output['min_rssi'] + 200) % 256,
@@ -238,8 +249,8 @@ def parser_cs34(config, topic, payload):
     
     # Process the data
     data = process(data, port, sequence_id, gateways)
-    if not data:
-        return [False, False]
+    #if not data:
+    #    return [False, False]
     logging.debug("[CS34] Processed: %s" % data)
 
     # Get topic
