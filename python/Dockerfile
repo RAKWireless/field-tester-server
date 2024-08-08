@@ -1,6 +1,7 @@
 root@loraserver01:/home/lora/raktester# cat Dockerfile
 FROM python:3.10-alpine3.17
 
+##uncomment to add proxy
 #ENV HTTPS_PROXY http://username:password@proxy:port
 #ENV HTTP_PROXY http://username:password@proxy:port
 
