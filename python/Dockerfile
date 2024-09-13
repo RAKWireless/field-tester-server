@@ -1,4 +1,4 @@
-FROM python:3.10-alpine3.17
+FROM python:3.12.6-alpine3.20
 
 WORKDIR /app
 ADD server.py requirements.txt  ./

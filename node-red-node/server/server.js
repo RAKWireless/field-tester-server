@@ -64,29 +64,33 @@ module.exports = function(RED) {
         if (( 1 == port) && (bytes.length != 10)) return null;
         if ((11 == port) && (bytes.length != 11)) return null;
 
-        // decode bytes    
-        var lonSign = (bytes[0]>>7) & 0x01 ? -1 : 1;
-        var latSign = (bytes[0]>>6) & 0x01 ? -1 : 1;
-        var encLat = ((bytes[0] & 0x3f)<<17)+(bytes[1]<<9)+(bytes[2]<<1)+(bytes[3]>>7);
-        var encLon = ((bytes[3] & 0x7f)<<16)+(bytes[4]<<8)+bytes[5];
-        var hdop = bytes[8]/10;
-        var sats = bytes[9];
-
-        // send only acceptable quality of position to mappers
-        if ((hdop > 2) || (sats < 5)) return null;
-
-        // create decoded data downlink
+        // output object
         var data = {};
-        data.latitude = latSign * (encLat * 108 + 53) / 10000000;
-        data.longitude = lonSign * (encLon * 215 + 107) / 10000000;  
-        data.altitude = ((bytes[6]<<8)+bytes[7])-1000;
-        data.accuracy = (hdop*5+5)/10;
-        data.hdop = hdop;
-        data.sats = sats;
-                
+
+        // decode bytes    
+        data.hdop = bytes[8]/10;
+        data.sats = bytes[9];
+        data.has_gps = ((data.hdop <= 2) && (data.sats >= 5));
+
+        // We only add GPS data and distances information if there is valid GPS data
+        if (data.has_gps) {
+            
+            var lonSign = (bytes[0]>>7) & 0x01 ? -1 : 1;
+            var latSign = (bytes[0]>>6) & 0x01 ? -1 : 1;
+            var encLat = ((bytes[0] & 0x3f)<<17)+(bytes[1]<<9)+(bytes[2]<<1)+(bytes[3]>>7);
+            var encLon = ((bytes[3] & 0x7f)<<16)+(bytes[4]<<8)+bytes[5];
+        
+            // create decoded data downlink
+            data.latitude = latSign * (encLat * 108 + 53) / 10000000;
+            data.longitude = lonSign * (encLon * 215 + 107) / 10000000;  
+            data.altitude = ((bytes[6]<<8)+bytes[7])-1000;
+            data.accuracy = (data.hdop*5+5)/10;
+                    
+        }
+
         // build gateway data
         data.num_gateways = gateways.length;
-        data.min_distance = 1e6;
+        data.min_distance = data.has_gps ? 1e6 : 0;
         data.max_distance = 0;
         data.min_rssi = 200;
         data.max_rssi = -200;
@@ -94,7 +98,7 @@ module.exports = function(RED) {
 
             if (gateway.rssi < data.min_rssi) data.min_rssi = gateway.rssi;
             if (gateway.rssi > data.max_rssi) data.max_rssi = gateway.rssi;
-            if (gateway.location) {
+            if ((data.has_gps) && (gateway.location)) {
                 var distance = parseInt(circleDistance(data, gateway.location)); 
                 if (distance < data.min_distance) data.min_distance = distance;
                 if (distance > data.max_distance) data.max_distance = distance;
@@ -104,8 +108,8 @@ module.exports = function(RED) {
 
         // build response buffer
         if (1 == port) {
-            var min_distance = constrain(Math.round(data.min_distance / 250.0), 1, 128);
-            var max_distance = constrain(Math.round(data.max_distance / 250.0), 1, 128);
+            var min_distance = data.has_gps ? constrain(Math.round(data.min_distance / 250.0), 1, 128) : 0;
+            var max_distance = data.has_gps ? constrain(Math.round(data.max_distance / 250.0), 1, 128) : 0;
             data.buffer = Buffer.from([
                 sequence_id & 0xFF,
                 parseInt(data.min_rssi + 200, 10) & 0xFF,
@@ -115,8 +119,8 @@ module.exports = function(RED) {
                 data.num_gateways & 0xFF
             ])
         } else if (11 == port) {
-            var min_distance = constrain(Math.round(data.min_distance / 10.0), 1, 65535);
-            var max_distance = constrain(Math.round(data.max_distance / 10.0), 1, 65535);
+            var min_distance = data.has_gps ? constrain(Math.round(data.min_distance / 10.0), 1, 65535) : 0;
+            var max_distance = data.has_gps ? constrain(Math.round(data.max_distance / 10.0), 1, 65535) : 0;
             data.buffer = Buffer.from([
                 sequence_id & 0xFF,
                 parseInt(data.min_rssi + 200, 10) & 0xFF,

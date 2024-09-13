@@ -103,47 +103,45 @@ MIN_RSSI=-200
 
 def process(data, port, sequence_id, gateways):
 
-    # Decode
-    lonSign = -1 if ((data[0]>>7) & 0x01) else 1
-    latSign = -1 if ((data[0]>>6) & 0x01) else 1
-    encLat = ((data[0] & 0x3f)<<17) + (data[1]<<9) + (data[2]<<1) + (data[3]>>7)
-    encLon = ((data[3] & 0x7f)<<16) + (data[4]<<8) + data[5]
-    hdop = data[8]/10
-    sats = data[9]
-
-    # Send only acceptable quality of position to mappers
-    if (hdop > 2) or (sats < 5):
-        return False
+    output = {}
 
     # Gather data
-    output = {
-        'latitude': latSign * (encLat * 108 + 53) / 10000000,
-        'longitude': lonSign * (encLon * 215 + 107) / 10000000,
-        'altitude': ((data[6]<<8) + data[7]) - 1000,
-        'accuracy': (hdop * 5 + 5) / 10,
-        'hdop': hdop,
-        'sats': sats,
-        'num_gateways': len(gateways),
-        'min_distance': MAX_DISTANCE,
-        'max_distance': MIN_DISTANCE,
-        'min_rssi': MAX_RSSI,
-        'max_rssi': MIN_RSSI
-    }
+    output['hdop'] = data[8]/10
+    output['sats'] = data[9]
+    output['has_gps'] = (output['hdop'] <= 2) and (output['sats'] >= 5)
+    
+    # We only add GPS data and distances information if there is valid GPS data
+    if output['has_gps']:
+        lonSign = -1 if ((data[0]>>7) & 0x01) else 1
+        latSign = -1 if ((data[0]>>6) & 0x01) else 1
+        encLat = ((data[0] & 0x3f)<<17) + (data[1]<<9) + (data[2]<<1) + (data[3]>>7)
+        encLon = ((data[3] & 0x7f)<<16) + (data[4]<<8) + data[5]
+        output['latitude'] = latSign * (encLat * 108 + 53) / 10000000
+        output['longitude'] = lonSign * (encLon * 215 + 107) / 10000000
+        output['altitude'] = ((data[6]<<8) + data[7]) - 1000
+        output['accuracy']: (output['hdop'] * 5 + 5) / 10
 
+    # Build gateway data
+    output['num_gateways'] = len(gateways)
+    output['min_distance'] = MAX_DISTANCE if output['has_gps'] else MIN_DISTANCE
+    output['max_distance'] = MIN_DISTANCE
+    output['min_rssi'] = MAX_RSSI
+    output['max_rssi'] = MIN_RSSI
     for gateway in gateways:
 
-        output['min_rssi'] = min(output['min_rssi'], gateway.get('rssi', MAX_RSSI));
-        output['max_rssi'] = max(output['max_rssi'], gateway.get('rssi', MIN_RSSI));
+        output['min_rssi'] = min(output['min_rssi'], gateway.get('rssi', MAX_RSSI))
+        output['max_rssi'] = max(output['max_rssi'], gateway.get('rssi', MIN_RSSI))
 
-        if 'location' in gateway:
-            distance = int(circleDistance(output, gateway['location'])) 
-            output['min_distance'] = min(output['min_distance'], distance)
-            output['max_distance'] = max(output['max_distance'], distance)
+        if output['has_gps']:
+            if 'location' in gateway:
+                distance = int(circleDistance(output, gateway['location'])) 
+                output['min_distance'] = min(output['min_distance'], distance)
+                output['max_distance'] = max(output['max_distance'], distance)
 
     # Build response buffer
     if 1 == port:
-        min_distance = constrain(int(round(output['min_distance'] / 250.0)), 1, 128)
-        max_distance = constrain(int(round(output['max_distance'] / 250.0)), 1, 128)
+        min_distance = constrain(int(round(output['min_distance'] / 250.0)), 1, 128) if output['has_gps'] else 0
+        max_distance = constrain(int(round(output['max_distance'] / 250.0)), 1, 128) if output['has_gps'] else 0
         output['buffer'] = [
             sequence_id % 256,
             int(output['min_rssi'] + 200) % 256,
@@ -153,8 +151,8 @@ def process(data, port, sequence_id, gateways):
             output['num_gateways'] % 256
         ]
     elif 11 == port:
-        min_distance = constrain(int(round(output['min_distance'] / 10.0)), 1, 65535)
-        max_distance = constrain(int(round(output['max_distance'] / 10.0)), 1, 65535)
+        min_distance = constrain(int(round(output['min_distance'] / 10.0)), 1, 65535) if output['has_gps'] else 0
+        max_distance = constrain(int(round(output['max_distance'] / 10.0)), 1, 65535) if output['has_gps'] else 0
         logging.debug("[TTS3] max_distance: %d" % max_distance)
         output['buffer'] = [
             sequence_id % 256,

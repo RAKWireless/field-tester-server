@@ -70,6 +70,7 @@ For the **Raw data** parser, the node will output all the parsed information alo
 
 ```
 {
+    "has_gsp":1,
     "latitude":41.6014325,
     "longitude":2.6221077,
     "altitude":95,
