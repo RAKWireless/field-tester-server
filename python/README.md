@@ -18,7 +18,7 @@ The script gets the configuration information from a `config.yml` file in the sa
 * logging section
     * level: logging level (10:debug, 20:info, 30:warning, 40:error)
 * parser section
-    * type: parser to use to decode the incomming JSON data (`TheThingsStack_v3` or `ChirpStack_v3`)
+    * type: parser to use to decode the incomming JSON data (`TheThingsStack_v3` or `ChirpStack_v3+`)
 
 ## Usage
 
