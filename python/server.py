@@ -133,8 +133,11 @@ def process(data, port, sequence_id, gateways):
         output['max_rssi'] = max(output['max_rssi'], gateway.get('rssi', MIN_RSSI))
 
         if output['has_gps']:
-            if 'location' in gateway:
-                distance = int(circleDistance(output, gateway['location'])) 
+            loc = gateway.get('location', {})
+            lat = loc.get('latitude')
+            lon = loc.get('longitude')
+            if lat is not None and lon is not None:
+                distance = int(circleDistance(output, loc)) 
                 output['min_distance'] = min(output['min_distance'], distance)
                 output['max_distance'] = max(output['max_distance'], distance)
 
